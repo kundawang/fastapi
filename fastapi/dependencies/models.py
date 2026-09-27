@@ -18,7 +18,17 @@ else:  # pragma: no cover
 def _unwrapped_call(call: Callable[..., Any] | None) -> Any:
     if call is None:
         return call  # pragma: no cover
-    unwrapped = inspect.unwrap(_impartial(call))
+    unwrapped = _impartial(call)
+    seen: set[int] = {id(unwrapped)}
+    # Unwrap functools.wraps (__wrapped__) and functools.partial layers in
+    # whatever order they were applied, e.g. a functools.wraps wrapper around
+    # a functools.partial of the original callable
+    while (wrapped := getattr(unwrapped, "__wrapped__", None)) is not None:
+        wrapped = _impartial(wrapped)
+        if id(wrapped) in seen:  # pragma: no cover
+            break
+        seen.add(id(wrapped))
+        unwrapped = wrapped
     return unwrapped
 
 
